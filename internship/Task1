@@ -1,0 +1,74 @@
+import hashlib
+import os
+import json
+
+# File to store hashes
+db_file = "file_integrity_db.json"
+
+def calculate_hash(file_path):
+    """Calculate SHA-256 hash of a file"""
+    sha256 = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            while chunk := f.read(4096):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+    except FileNotFoundError:
+        return None
+
+def save_hashes(hashes):
+    """Save hashes to a JSON file"""
+    with open(db_file, "w") as f:
+        json.dump(hashes, f, indent=4)
+
+def load_hashes():
+    """Load hashes from a JSON file"""
+    if os.path.exists(db_file):
+        with open(db_file, "r") as f:
+            return json.load(f)
+    return {}
+
+def initialize_integrity_check(directory):
+    """Initialize file integrity check by storing hashes"""
+    hashes = {}
+    for root, _, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            hashes[file_path] = calculate_hash(file_path)
+    save_hashes(hashes)
+    print("Initial file integrity database created.")
+
+def check_integrity():
+    """Check file integrity against stored hashes"""
+    stored_hashes = load_hashes()
+    current_hashes = {}
+    integrity_status = {}
+    
+    for file_path, old_hash in stored_hashes.items():
+        new_hash = calculate_hash(file_path)
+        if new_hash is None:
+            integrity_status[file_path] = "MISSING"
+        elif new_hash != old_hash:
+            integrity_status[file_path] = "MODIFIED"
+        else:
+            integrity_status[file_path] = "UNCHANGED"
+        
+        current_hashes[file_path] = new_hash
+    
+    save_hashes(current_hashes)
+    
+    for file, status in integrity_status.items():
+        print(f"{file}: {status}")
+    
+    return integrity_status
+
+if __name__ == "__main__":
+    directory = input("Enter directory to monitor: ")
+    action = input("Enter 'init' to initialize or 'check' to verify integrity: ").strip().lower()
+    
+    if action == "init":
+        initialize_integrity_check(directory)
+    elif action == "check":
+        check_integrity()
+    else:
+        print("Invalid action. Use 'init' or 'check'.")

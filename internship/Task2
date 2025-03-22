@@ -1,0 +1,64 @@
+import requests
+from bs4 import BeautifulSoup
+
+# Common SQL Injection payloads
+test_payloads = ["' OR '1'='1", "admin' --", "admin' #"]
+
+# Common XSS payloads
+xss_payloads = ["<script>alert('XSS')</script>", "<img src='x' onerror='alert(1)'>"]
+
+def check_sql_injection(url):
+    """Check if URL is vulnerable to SQL Injection"""
+    for payload in test_payloads:
+        response = requests.get(url + payload)
+        if "sql" in response.text.lower() or "syntax" in response.text.lower():
+            print(f"[!] Possible SQL Injection vulnerability found at {url}")
+            return
+    print("[-] No SQL Injection vulnerabilities detected.")
+
+def check_xss(url):
+    """Check if URL is vulnerable to XSS"""
+    for payload in xss_payloads:
+        response = requests.get(url + payload)
+        if payload in response.text:
+            print(f"[!] Possible XSS vulnerability found at {url}")
+            return
+    print("[-] No XSS vulnerabilities detected.")
+
+def check_security_headers(url):
+    """Check if important security headers are missing"""
+    response = requests.get(url)
+    headers = response.headers
+    missing_headers = []
+    
+    security_headers = ["X-Frame-Options", "Content-Security-Policy", "Strict-Transport-Security"]
+    
+    for header in security_headers:
+        if header not in headers:
+            missing_headers.append(header)
+    
+    if missing_headers:
+        print(f"[!] Missing Security Headers: {', '.join(missing_headers)}")
+    else:
+        print("[+] All important security headers are present.")
+
+def check_open_directories(url):
+    """Check for open directories"""
+    response = requests.get(url)
+    if "Index of /" in response.text:
+        print(f"[!] Open Directory Found: {url}")
+    else:
+        print("[-] No open directories detected.")
+
+def scan_website(target_url):
+    """Run all vulnerability checks"""
+    print(f"Scanning: {target_url}\n")
+    check_sql_injection(target_url)
+    check_xss(target_url)
+    check_security_headers(target_url)
+    check_open_directories(target_url)
+    print("\nScan Complete.")
+
+if __name__ == "__main__":
+    target = input("Enter target URL (e.g., http://example.com/): ").strip()
+    scan_website(target)

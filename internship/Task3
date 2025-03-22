@@ -1,0 +1,54 @@
+import socket
+import requests
+# from tqdm import tqdm
+
+# Common ports to scan
+common_ports = [21, 22, 23, 25, 53, 80, 443, 3306, 8080, 8443]
+
+# Wordlist for directories
+common_dirs = ["admin", "login", "dashboard", "uploads", "config", "backup"]
+
+def scan_ports(target):
+    """Scan for open ports"""
+    print("\n[+] Scanning open ports...")
+    open_ports = []
+    for port in tqdm(common_ports):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        if sock.connect_ex((target, port)) == 0:
+            open_ports.append(port)
+        sock.close()
+    print(f"Open ports: {open_ports}" if open_ports else "No open ports found.")
+
+def scan_subdomains(target, subdomains):
+    """Find active subdomains"""
+    print("\n[+] Scanning subdomains...")
+    for sub in tqdm(subdomains):
+        url = f"http://{sub}.{target}"
+        try:
+            response = requests.get(url, timeout=2)
+            if response.status_code < 400:
+                print(f"[+] Found subdomain: {url}")
+        except requests.exceptions.RequestException:
+            pass
+
+def brute_force_dirs(target):
+    """Find hidden directories"""
+    print("\n[+] Brute forcing directories...")
+    for directory in tqdm(common_dirs):
+        url = f"{target}/{directory}"
+        response = requests.get(url)
+        if response.status_code < 400:
+            print(f"[+] Found: {url} ({response.status_code})")
+
+def run_penetration_tests(target):
+    """Run all penetration tests"""
+    print(f"Starting penetration test on {target}\n")
+    scan_ports(target)
+    scan_subdomains(target, ["www", "mail", "ftp", "blog", "test", "dev"])
+    brute_force_dirs(target)
+    print("\nPenetration Testing Complete.")
+
+if __name__ == "__main__":
+    target_domain = input("Enter target domain (e.g., example.com): ").strip()
+    run_penetration_tests(target_domain)
